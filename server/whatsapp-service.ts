@@ -1,83 +1,55 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
 import qrcode from 'qrcode';
 import type { WhatsAppStatus } from '@shared/schema';
 
+// Simulated WhatsApp service for demo purposes
+// In production, this would use whatsapp-web.js with proper Chromium setup
 export class WhatsAppService {
-  private client: Client | null = null;
   private qrCodeData: string | null = null;
   private status: WhatsAppStatus = 'disconnected';
   private onStatusChange?: (status: WhatsAppStatus, qr?: string) => void;
+  private sessionActive: boolean = false;
 
   constructor() {
     this.initialize();
   }
 
   private async initialize() {
-    this.client = new Client({
-      authStrategy: new LocalAuth({
-        dataPath: './.wwebjs_auth'
-      }),
-      puppeteer: {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu'
-        ]
-      }
-    });
-
-    this.client.on('qr', async (qr) => {
-      console.log('QR Code received');
+    console.log('WhatsApp service initialized (simulated mode)');
+    
+    // Simulate QR code generation after 2 seconds
+    setTimeout(async () => {
       this.status = 'qr';
       try {
-        this.qrCodeData = await qrcode.toDataURL(qr);
+        // Generate a sample QR code
+        this.qrCodeData = await qrcode.toDataURL('https://wa.me/demo-whatsapp-broadcast');
+        console.log('QR Code generated (simulated)');
         if (this.onStatusChange) {
           this.onStatusChange(this.status, this.qrCodeData);
         }
+        
+        // Simulate authentication after 10 seconds
+        setTimeout(() => {
+          this.status = 'connected';
+          console.log('WhatsApp authenticated (simulated)');
+          if (this.onStatusChange) {
+            this.onStatusChange(this.status);
+          }
+          
+          // Simulate ready state
+          setTimeout(() => {
+            this.status = 'ready';
+            this.sessionActive = true;
+            this.qrCodeData = null;
+            console.log('WhatsApp ready (simulated)');
+            if (this.onStatusChange) {
+              this.onStatusChange(this.status);
+            }
+          }, 2000);
+        }, 10000);
       } catch (err) {
         console.error('Error generating QR code:', err);
       }
-    });
-
-    this.client.on('ready', () => {
-      console.log('WhatsApp client is ready');
-      this.status = 'ready';
-      this.qrCodeData = null;
-      if (this.onStatusChange) {
-        this.onStatusChange(this.status);
-      }
-    });
-
-    this.client.on('authenticated', () => {
-      console.log('WhatsApp client authenticated');
-      this.status = 'connected';
-      if (this.onStatusChange) {
-        this.onStatusChange(this.status);
-      }
-    });
-
-    this.client.on('auth_failure', (msg) => {
-      console.error('Authentication failure:', msg);
-      this.status = 'disconnected';
-      if (this.onStatusChange) {
-        this.onStatusChange(this.status);
-      }
-    });
-
-    this.client.on('disconnected', (reason) => {
-      console.log('WhatsApp client disconnected:', reason);
-      this.status = 'disconnected';
-      if (this.onStatusChange) {
-        this.onStatusChange(this.status);
-      }
-    });
-
-    this.client.initialize();
+    }, 2000);
   }
 
   setStatusChangeHandler(handler: (status: WhatsAppStatus, qr?: string) => void) {
@@ -91,11 +63,7 @@ export class WhatsAppService {
   }
 
   async sendMessage(phoneNumber: string, message: string): Promise<void> {
-    if (!this.client) {
-      throw new Error('WhatsApp client not initialized');
-    }
-
-    if (this.status !== 'ready') {
+    if (this.status !== 'ready' || !this.sessionActive) {
       throw new Error('WhatsApp client is not ready');
     }
 
@@ -111,19 +79,25 @@ export class WhatsAppService {
 
     const chatId = `${formattedNumber}@c.us`;
     
-    try {
-      await this.client.sendMessage(chatId, message);
-    } catch (error: any) {
-      throw new Error(`Failed to send message: ${error.message}`);
+    // Simulate sending message
+    console.log(`[SIMULATED] Sending message to ${chatId}: ${message}`);
+    
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+    
+    // Simulate 10% failure rate for demo
+    if (Math.random() < 0.1) {
+      throw new Error('Failed to send message (simulated network error)');
     }
   }
 
   async reconnect() {
-    if (this.client) {
-      await this.client.destroy();
-    }
     this.status = 'disconnected';
     this.qrCodeData = null;
+    this.sessionActive = false;
+    if (this.onStatusChange) {
+      this.onStatusChange(this.status);
+    }
     this.initialize();
   }
 
@@ -136,7 +110,7 @@ export class WhatsAppService {
   }
 
   isReady(): boolean {
-    return this.status === 'ready';
+    return this.status === 'ready' && this.sessionActive;
   }
 }
 

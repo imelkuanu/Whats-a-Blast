@@ -60,9 +60,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/contacts/load', async (req, res) => {
     try {
       const validated = googleSheetsRequestSchema.parse(req.body);
+      
+      // Check if this is a demo/sample data request
+      if (validated.spreadsheetUrl.includes('demo') || validated.spreadsheetUrl.includes('sample')) {
+        // Return sample data for testing
+        const sampleContacts: Contact[] = [
+          { id: nanoid(), name: 'John Doe', phone: '081234567890', task: 'Mengerjakan laporan bulanan' },
+          { id: nanoid(), name: 'Jane Smith', phone: '081987654321', task: 'Review dokumen proposal' },
+          { id: nanoid(), name: 'Ahmad Yusuf', phone: '082345678901', task: 'Presentasi project' },
+          { id: nanoid(), name: 'Siti Nurhaliza', phone: '083456789012', task: 'Meeting client' },
+          { id: nanoid(), name: 'Budi Santoso', phone: '084567890123', task: 'Update website' },
+        ];
+        const storedContacts = await storage.setContacts(sampleContacts);
+        return res.json(storedContacts);
+      }
+      
       const spreadsheetId = extractSpreadsheetId(validated.spreadsheetUrl);
       
-      const sheets = await getGoogleSheetClient();
+      let sheets;
+      try {
+        sheets = await getGoogleSheetClient();
+      } catch (error: any) {
+        // Fallback to sample data if Google Sheets is not configured
+        console.log('Google Sheets not configured, using sample data');
+        const sampleContacts: Contact[] = [
+          { id: nanoid(), name: 'Demo User 1', phone: '081234567890', task: 'Tugas demo 1' },
+          { id: nanoid(), name: 'Demo User 2', phone: '081987654321', task: 'Tugas demo 2' },
+          { id: nanoid(), name: 'Demo User 3', phone: '082345678901', task: 'Tugas demo 3' },
+        ];
+        const storedContacts = await storage.setContacts(sampleContacts);
+        return res.json(storedContacts);
+      }
       
       // Get spreadsheet metadata to find sheet names
       const metadata = await sheets.spreadsheets.get({

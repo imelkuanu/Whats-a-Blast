@@ -37,7 +37,7 @@ export function GoogleSheetsInput({ onLoadData, isLoading }: GoogleSheetsInputPr
           Google Sheets Data
         </CardTitle>
         <CardDescription>
-          Masukkan link Google Sheets yang berisi data kontak
+          Masukkan link Google Sheets atau gunakan "demo" untuk data contoh
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -50,14 +50,19 @@ export function GoogleSheetsInput({ onLoadData, isLoading }: GoogleSheetsInputPr
                 <FormItem>
                   <FormLabel>URL Google Sheets</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        {...field}
-                        placeholder="https://docs.google.com/spreadsheets/d/..."
-                        className="pl-9"
-                        data-testid="input-spreadsheet-url"
-                      />
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          {...field}
+                          placeholder='Ketik "demo" atau paste URL Google Sheets'
+                          className="pl-9"
+                          data-testid="input-spreadsheet-url"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        💡 Tip: Ketik "demo" untuk mencoba dengan data contoh
+                      </p>
                     </div>
                   </FormControl>
                   <FormMessage />

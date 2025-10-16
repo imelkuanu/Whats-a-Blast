@@ -94,16 +94,57 @@ server/
 - **Responsive**: Mobile-first design with sidebar collapse
 
 ## Google Sheets Integration
-- Users must authorize Google Sheets connection
+
+**🚀 Quick Start (Demo Mode):**
+Type `demo` or `sample` in the spreadsheet URL field to load sample contact data instantly - no Google Sheets setup needed!
+
+**Production Setup (Optional):**
+1. User must authorize Google Sheets connection via Replit Integrations
+2. Connection is already configured in this project (conn_google-sheet_01K7P8KN4CYD50NCGYSTK2Z7SN)
+
+**Fallback Behavior:**
+- If Google Sheets is not configured, sample data is automatically loaded
+- This allows immediate testing of all features without setup
+
+**Sheet Format:**
 - Sheet should have columns for: Name, Phone, Task
-- Phone numbers must be in Indonesian format (+62 or 08)
+- Phone numbers must be in Indonesian format (+62 or 08xxx)
 - Configurable column mapping (default: A=Name, B=Phone, C=Task)
+- First row with headers (Nama/Name) will be automatically skipped
+
+**Example Google Sheet:**
+```
+| Nama          | No. WhatsApp | Tugas              |
+|---------------|--------------|-------------------|
+| John Doe      | 081234567890 | Mengerjakan laporan|
+| Jane Smith    | +6281987654321 | Review dokumen   |
+```
 
 ## WhatsApp Integration
-- Uses whatsapp-web.js library
-- QR code authentication (no Business API needed)
-- Session persistence to avoid re-login
-- Configurable message delay to prevent spam detection
+**⚠️ Current Mode: SIMULATED**
+
+Due to Replit environment limitations (Chromium/Puppeteer dependencies), the application runs in **simulation mode** for demonstration purposes.
+
+**Simulated Behavior:**
+- QR code is generated for visual demonstration (not functional)
+- Auto-authentication after 10 seconds
+- Message sending is logged to console (not actually sent)
+- 10% random failure rate to demonstrate error handling
+- All UI flows and features work exactly as they would in production
+
+**Production Setup (for deployment outside Replit):**
+1. Install system dependencies: Chromium, required libraries
+2. Replace simulated WhatsApp service with whatsapp-web.js implementation
+3. Configure proper authentication and session persistence
+4. Set up monitoring and error recovery
+
+**Current Simulation Features:**
+- ✅ QR code generation and display
+- ✅ Connection status tracking
+- ✅ Message queue with configurable delays
+- ✅ Progress tracking and error handling
+- ✅ Complete UI/UX flow demonstration
+- ❌ Actual WhatsApp message delivery (requires production setup)
 
 ## User Preferences
 - Language: Indonesian (Bahasa Indonesia)

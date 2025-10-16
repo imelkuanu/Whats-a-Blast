@@ -59,8 +59,7 @@ export default function Dashboard() {
   // Load contacts from Google Sheets
   const loadContactsMutation = useMutation({
     mutationFn: async (data: GoogleSheetsRequest) => {
-      const response = await apiRequest<Contact[]>('POST', '/api/contacts/load', data);
-      return response;
+      return await apiRequest<Contact[]>('POST', '/api/contacts/load', data);
     },
     onSuccess: (data) => {
       setContacts(data);

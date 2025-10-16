@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, QrCode, CheckCircle2, XCircle, RefreshCw } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, QrCode, CheckCircle2, XCircle, RefreshCw, Info } from "lucide-react";
 import type { WhatsAppStatus } from "@shared/schema";
 
 interface WhatsAppQRCardProps {
@@ -52,7 +53,13 @@ export function WhatsAppQRCard({ status, qrCode, onReconnect }: WhatsAppQRCardPr
         </div>
         {getStatusBadge()}
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <Alert className="border-primary/20 bg-primary/5">
+          <Info className="h-4 w-4 text-primary" />
+          <AlertDescription className="text-sm">
+            <strong>Mode Demo:</strong> Aplikasi berjalan dalam mode simulasi untuk demonstrasi. Pesan tidak benar-benar dikirim ke WhatsApp.
+          </AlertDescription>
+        </Alert>
         {(status === 'qr' || status === 'connecting') && qrCode ? (
           <div className="flex flex-col items-center justify-center p-6 bg-muted/30 rounded-lg">
             <div className="bg-white p-4 rounded-lg shadow-sm mb-4">
