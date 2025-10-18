@@ -10,10 +10,11 @@ export const contactSchema = z.object({
 
 export type Contact = z.infer<typeof contactSchema>;
 
-// Broadcast message schema
+// Broadcast message schema - SIMPLE VERSION
 export const broadcastMessageSchema = z.object({
-  message: z.string().min(1, "Pesan tidak boleh kosong").max(4096, "Pesan terlalu panjang (max 4096 karakter)"),
-  delay: z.number().min(1).max(10).default(2), // delay in seconds between messages
+  message: z.string(),
+  delay: z.number().default(2),
+  contactIds: z.array(z.string())
 });
 
 export type BroadcastMessage = z.infer<typeof broadcastMessageSchema>;
@@ -25,11 +26,11 @@ export type MessageStatus = z.infer<typeof messageStatusSchema>;
 // Broadcast result
 export const broadcastResultSchema = z.object({
   contactId: z.string(),
-  name: z.string(),
-  phone: z.string(),
+  contactName: z.string(),
   status: messageStatusSchema,
+  message: z.string().optional(),
   error: z.string().optional(),
-  timestamp: z.string().optional(),
+  timestamp: z.string(),
 });
 
 export type BroadcastResult = z.infer<typeof broadcastResultSchema>;
@@ -40,7 +41,7 @@ export type WhatsAppStatus = z.infer<typeof whatsappStatusSchema>;
 
 // Google Sheets data request
 export const googleSheetsRequestSchema = z.object({
-  spreadsheetUrl: z.string().url("URL Google Sheets tidak valid"),
+  spreadsheetUrl: z.string().min(1, "URL Google Sheets harus diisi"),
   nameColumn: z.string().default("A"),
   phoneColumn: z.string().default("B"),
   taskColumn: z.string().default("C"),

@@ -57,7 +57,7 @@ export function WhatsAppQRCard({ status, qrCode, onReconnect }: WhatsAppQRCardPr
         <Alert className="border-primary/20 bg-primary/5">
           <Info className="h-4 w-4 text-primary" />
           <AlertDescription className="text-sm">
-            <strong>Mode Demo:</strong> Aplikasi berjalan dalam mode simulasi untuk demonstrasi. Pesan tidak benar-benar dikirim ke WhatsApp.
+            <strong>Status Real:</strong> Aplikasi terhubung dengan WhatsApp Web. Pesan akan benar-benar dikirim.
           </AlertDescription>
         </Alert>
         {(status === 'qr' || status === 'connecting') && qrCode ? (

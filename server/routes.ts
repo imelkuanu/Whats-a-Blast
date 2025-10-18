@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { whatsappService } from "./whatsapp-service";
 import { getGoogleSheetClient, extractSpreadsheetId, columnToIndex } from "./google-sheets";
-import { googleSheetsRequestSchema, broadcastMessageSchema, type Contact, type BroadcastResult } from "@shared/schema";
+import { googleSheetsRequestSchema, type Contact, type BroadcastResult } from "@shared/schema";
 import { nanoid } from "nanoid";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -62,8 +62,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validated = googleSheetsRequestSchema.parse(req.body);
       
       // Check if this is a demo/sample data request
-      if (validated.spreadsheetUrl.includes('demo') || validated.spreadsheetUrl.includes('sample')) {
-        // Return sample data for testing
+      if (validated.spreadsheetUrl.includes('demo') || validated.spreadsheetUrl === 'demo') {
+        // Return sample data only when explicitly requested
         const sampleContacts: Contact[] = [
           { id: nanoid(), name: 'John Doe', phone: '081234567890', task: 'Mengerjakan laporan bulanan' },
           { id: nanoid(), name: 'Jane Smith', phone: '081987654321', task: 'Review dokumen proposal' },
@@ -81,15 +81,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         sheets = await getGoogleSheetClient();
       } catch (error: any) {
-        // Fallback to sample data if Google Sheets is not configured
-        console.log('Google Sheets not configured, using sample data');
-        const sampleContacts: Contact[] = [
-          { id: nanoid(), name: 'Demo User 1', phone: '081234567890', task: 'Tugas demo 1' },
-          { id: nanoid(), name: 'Demo User 2', phone: '081987654321', task: 'Tugas demo 2' },
-          { id: nanoid(), name: 'Demo User 3', phone: '082345678901', task: 'Tugas demo 3' },
-        ];
-        const storedContacts = await storage.setContacts(sampleContacts);
-        return res.json(storedContacts);
+        // Return error instead of falling back to demo data
+        console.error('Google Sheets authentication failed:', error);
+        return res.status(500).json({ 
+          message: 'Google Sheets tidak terkoneksi. Pastikan konfigurasi Google API sudah benar.' 
+        });
       }
       
       // Get spreadsheet metadata to find sheet names
@@ -147,7 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (contacts.length === 0) {
-        return res.status(400).json({ message: 'Tidak ada kontak valid yang ditemukan' });
+        return res.status(400).json({ message: 'Tidak ada kontak valid yang ditemukan. Pastikan format nomor WhatsApp benar (+62/08)' });
       }
       
       // Store contacts
@@ -160,14 +156,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Send broadcast
+  // Send broadcast - FIXED VERSION (GUNAKAN TEMPLATE MASING-MASING KONTAK)
   app.post('/api/broadcast/send', async (req, res) => {
+    console.log('🎯 BROADCAST SEND REQUEST RECEIVED');
+    console.log('Request body:', req.body);
+    
     try {
-      const { message, delay, contactIds } = req.body;
+      // Validasi manual - NO ZOD VALIDATION
+      const { message, delay = 2, contactIds = [] } = req.body;
       
-      const validated = broadcastMessageSchema.parse({ message, delay });
+      console.log('Parsed data:', { message, delay, contactIds });
       
-      if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
+      if (!contactIds || contactIds.length === 0) {
         return res.status(400).json({ message: 'Pilih minimal satu kontak' });
       }
       
@@ -175,74 +175,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'WhatsApp belum terhubung' });
       }
       
-      const contacts = await storage.getAllContacts();
-      const selectedContacts = contacts.filter(c => contactIds.includes(c.id));
+      // Dapatkan kontak dari storage
+      const allContacts = await storage.getAllContacts();
+      const selectedContacts = allContacts.filter(contact => 
+        contactIds.includes(contact.id)
+      );
+      
+      console.log(`📋 Found ${selectedContacts.length} contacts`);
       
       if (selectedContacts.length === 0) {
         return res.status(400).json({ message: 'Kontak tidak ditemukan' });
       }
       
-      // Send immediate response
-      res.json({ message: 'Broadcast dimulai', count: selectedContacts.length });
+      console.log('✅ Starting broadcast to', selectedContacts.length, 'contacts');
       
-      // Process broadcast asynchronously
+      // Kirim response immediate
+      res.json({ 
+        success: true, 
+        message: 'Broadcast dimulai', 
+        count: selectedContacts.length 
+      });
+      
+      // Process broadcast async
       (async () => {
         const results: BroadcastResult[] = [];
         
-        for (const contact of selectedContacts) {
+        for (let i = 0; i < selectedContacts.length; i++) {
+          const contact = selectedContacts[i];
           const result: BroadcastResult = {
             contactId: contact.id,
-            name: contact.name,
-            phone: contact.phone,
+            contactName: contact.name,
             status: 'sending',
+            message: 'Mengirim pesan...',
             timestamp: new Date().toISOString(),
           };
           
+          // Broadcast start progress
           broadcast({
             type: 'broadcast_progress',
             result,
           });
           
           try {
-            // Replace variables in message
-            let personalizedMessage = validated.message
+            // FIX: GUNAKAN TEMPLATE DARI KONTAK ITU SENDIRI (kolom C), ABAIKAN message dari user
+            let personalizedMessage = contact.task || '';
+            
+            // Tetap replace variables jika ada
+            personalizedMessage = personalizedMessage
               .replace(/{nama}/g, contact.name)
               .replace(/{tugas}/g, contact.task || '-');
             
+            console.log(`📤 [${i+1}/${selectedContacts.length}] Sending to ${contact.name}:`, personalizedMessage);
+            
+            // Kirim via WhatsApp
             await whatsappService.sendMessage(contact.phone, personalizedMessage);
             
+            // Success
             result.status = 'sent';
-            result.timestamp = new Date().toISOString();
+            result.message = 'Pesan terkirim';
+            console.log(`✅ [${i+1}/${selectedContacts.length}] Sent to ${contact.name}`);
+            
           } catch (error: any) {
+            // Failed
             result.status = 'failed';
-            result.error = error.message;
-            result.timestamp = new Date().toISOString();
+            result.message = error.message || 'Gagal mengirim';
+            console.error(`❌ [${i+1}/${selectedContacts.length}] Failed to ${contact.name}:`, error.message);
           }
           
+          result.timestamp = new Date().toISOString();
           results.push(result);
           
+          // Broadcast final result
           broadcast({
             type: 'broadcast_progress',
             result,
           });
           
-          // Delay before next message
-          if (selectedContacts.indexOf(contact) < selectedContacts.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, validated.delay * 1000));
+          // Delay untuk pesan berikutnya (kecuali yang terakhir)
+          if (i < selectedContacts.length - 1 && delay > 0) {
+            console.log(`⏳ Waiting ${delay} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, delay * 1000));
           }
         }
         
-        // Send completion message
-        const sent = results.filter(r => r.status === 'sent').length;
-        const failed = results.filter(r => r.status === 'failed').length;
+        // Kirim summary
+        const sentCount = results.filter(r => r.status === 'sent').length;
+        const failedCount = results.filter(r => r.status === 'failed').length;
+        
+        console.log(`🎉 Broadcast completed: ${sentCount}/${selectedContacts.length} sent`);
         
         broadcast({
           type: 'broadcast_complete',
           summary: {
-            total: results.length,
-            sent,
-            failed,
-          },
+            total: selectedContacts.length,
+            sent: sentCount,
+            failed: failedCount
+          }
         });
       })();
       

@@ -19,7 +19,6 @@ export default function Dashboard() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [broadcastResults, setBroadcastResults] = useState<BroadcastResult[]>([]);
-  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const [contactStatuses, setContactStatuses] = useState<Map<string, BroadcastResult['status']>>(new Map());
 
   // Handle WebSocket messages
@@ -48,7 +47,6 @@ export default function Dashboard() {
         return newMap;
       });
     } else if (lastMessage.type === 'broadcast_complete') {
-      setIsBroadcasting(false);
       toast({
         title: "Broadcast Selesai",
         description: `${lastMessage.summary.sent} pesan terkirim, ${lastMessage.summary.failed} gagal`,
@@ -87,7 +85,6 @@ export default function Dashboard() {
       return response;
     },
     onSuccess: () => {
-      setIsBroadcasting(true);
       setBroadcastResults([]);
       setContactStatuses(new Map());
       toast({
@@ -145,13 +142,21 @@ export default function Dashboard() {
     }
   };
 
-  const handleSendBroadcast = (data: BroadcastMessage) => {
-    const selectedContactsList = contacts.filter(c => selectedContacts.has(c.id));
-    sendBroadcastMutation.mutate({
-      ...data,
-      contactIds: selectedContactsList.map(c => c.id),
-    });
+  // FIXED: HandleSendBroadcast tanpa "Pesan default"
+  const handleSendBroadcast = (data: { message: string; delay: number }) => {
+    console.log('🚀 Sending broadcast...');
+    
+    const fixedData = {
+      message: data.message, // LANGSUNG PAKAI data.message, NO FALLBACK
+      delay: data.delay,
+      contactIds: Array.from(selectedContacts)
+    };
+    
+    console.log('Data yang dikirim:', fixedData);
+    sendBroadcastMutation.mutate(fixedData);
   };
+
+  const isBroadcasting = sendBroadcastMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -191,8 +196,10 @@ export default function Dashboard() {
 
           <MessageComposer
             onSend={handleSendBroadcast}
-            isSending={sendBroadcastMutation.isPending || isBroadcasting}
+            isSending={isBroadcasting}
             selectedCount={selectedContacts.size}
+            contacts={contacts}
+            selectedContacts={selectedContacts}
           />
 
           {broadcastResults.length > 0 && (
